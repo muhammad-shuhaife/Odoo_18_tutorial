@@ -25,7 +25,7 @@
 
     <!-- Action for Sales Reporting -->
     <record id="action_service_report_wizard_sale" model="ir.actions.act_window">
-        <field name="name">Service Report</field>
+        <field name="name">Sales Analysis by Product</field>
         <field name="res_model">service.report.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
@@ -34,7 +34,7 @@
 
     <!-- Action for Purchase Reporting -->
     <record id="action_service_report_wizard_purchase" model="ir.actions.act_window">
-        <field name="name">Service Report</field>
+        <field name="name">Purchase Analysis by Product</field>
         <field name="res_model">service.report.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
@@ -43,14 +43,14 @@
 
     <!-- Sales -> Reporting -> Service Report -->
     <menuitem id="menu_service_report_sale"
-              name="Service Report"
+              name="Sales Analysis by Product"
               action="action_service_report_wizard_sale"
               parent="sale.menu_sale_report"
               sequence="40"/>
 
     <!-- Purchase -> Reporting -> Service Report -->
     <menuitem id="menu_service_report_purchase"
-              name="Service Report"
+              name="Purchase Analysis by Product"
               action="action_service_report_wizard_purchase"
               parent="purchase.purchase_report_main"
               sequence="40"/>
