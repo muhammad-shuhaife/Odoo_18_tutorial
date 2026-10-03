@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# IDEs
+.idea/
+.vscode/
+
+# Python & Odoo artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.log
