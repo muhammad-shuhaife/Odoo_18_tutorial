@@ -228,7 +228,7 @@
                                         <span t-esc="'{:,.2f}'.format(l['credit']) if l.get('credit') else '0.00'"/>
                                     </td>
                                     <td style="padding: 3px 2px; text-align: right; font-weight: bold; border: none;">
-                                       <span t-esc="'{:,.2f}'.format(abs(l['balance'])) if l.get('balance') is not None else '0.00'"/>
+                                       <span t-esc="('{:,.2f} {}'.format(abs(l['balance']), 'Cr' if l['balance'] &lt; -0.005 else ('Dr' if l['balance'] &gt; 0.005 else ''))).strip() if l.get('balance') is not None else '0.00'"/>
                                     </td>
                                 </tr>
                             </t>
@@ -249,7 +249,7 @@
                                     <span t-esc="'{:,.2f}'.format(data.get('total_credit', 0.0))"/>
                                 </td>
                                 <td style="padding: 4px 2px; text-align: right; border: none;">
-                                    <span t-esc="'{:,.2f}'.format(abs(data.get('final_balance', 0.0)))"/>
+                                    <span t-esc="('{:,.2f} {}'.format(abs(data.get('final_balance', 0.0)), 'Cr' if data.get('final_balance', 0.0) &lt; -0.005 else ('Dr' if data.get('final_balance', 0.0) &gt; 0.005 else ''))).strip()"/>
                                 </td>
                             </tr>
                         </tbody>
