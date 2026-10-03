@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Accounting > Reporting > Statement of Accounts -->
+    <menuitem id="menu_soa_report_reporting"
+              name="Statement of Account"
+              parent="account.menu_finance_reports"
+              action="action_soa_report_wizard"
+              sequence="25"/>
+</odoo>
