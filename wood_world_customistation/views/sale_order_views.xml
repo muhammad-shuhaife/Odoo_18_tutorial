@@ -1,0 +1,81 @@
+<odoo>
+    <record id="wwd_view_order_form_inherit" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_open_pi_summary_wizard"
+                        type="object"
+                        string="Print Proforma Invoice"
+                        class="btn-secondary"
+                        icon="fa-print"/>
+                <button name="action_create_child_sale_order"
+                        type="object"
+                        string="Create Related Sale Order"
+                        class="btn-secondary"
+                        icon="fa-plus"/>
+            </xpath>
+
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button type="object"
+                        name="action_view_child_sale_orders"
+                        class="oe_stat_button"
+                        icon="fa-sitemap"
+                        invisible="not child_sale_order_ids">
+                    <field name="child_sale_order_count"
+                           widget="statinfo"
+                           string="Related Orders"/>
+                </button>
+                <button name="action_view_pi_history"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-file-text-o"
+                        invisible="not pi_history_count">
+                    <field name="pi_history_count" string="Proforma Invoices" widget="statinfo"/>
+                </button>
+            </xpath>
+
+            <xpath expr="//field[@name='sale_order_template_id']" position="after">
+                <xpath expr="//field[@name='project_id']" position="move"/>
+                <field name="subject"/>
+            </xpath>
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="parent_sale_order_id"
+                       readonly="1"
+                       invisible="not parent_sale_order_id"/>
+            </xpath>
+            <xpath expr="//field[@name='payment_term_id']" position="after">
+                <field name="reference"/>
+                <field name="job_reference"/>
+                <field name="lpo_ref"/>
+                <field name="attention"/>
+            </xpath>
+            <xpath expr="//field[@name='order_line']//field[@name='product_template_id']"
+                   position="after">
+                <field name="custom_image_1"
+                       widget="image"
+                       class="oe_avatar"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_order_list_related_orders" model="ir.ui.view">
+        <field name="name">sale.order.list.related.orders</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_quotation_tree_with_onboarding"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="decoration-success">child_sale_order_count &gt; 0</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="child_sale_order_count"
+                       string="Related"
+                       widget="badge"
+                       decoration-info="child_sale_order_count &gt; 0"
+                       invisible="child_sale_order_count == 0"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

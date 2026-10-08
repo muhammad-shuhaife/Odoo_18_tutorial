@@ -1,0 +1,33 @@
+<odoo>
+    <record id="view_sale_order_pi_summary_wizard_form" model="ir.ui.view">
+        <field name="name">sale.order.pi.summary.wizard.form</field>
+        <field name="model">sale.order.pi.summary.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Proforma Invoice Summary">
+                <field name="sale_order_id" invisible="1"/>
+                <group>
+                    <field name="summary" placeholder="Enter description to show on the PI product line..."/>
+                </group>
+                <group>
+                    <group>
+                        <field name="payment_percentage"
+                               widget="radio"
+                               options="{'horizontal': true}"/>
+                        <field name="amount"/>
+                    </group>
+                    <group>
+                        <field name="qty" />
+                        <field name="full_amount" readonly="1"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_print_report"
+                            string="Print Proforma Invoice"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

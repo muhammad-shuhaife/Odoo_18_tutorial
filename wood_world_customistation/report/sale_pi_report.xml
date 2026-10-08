@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_proforma_invoice" model="report.paperformat">
+        <field name="name">Proforma Invoice A4</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">8</field>
+        <field name="margin_bottom">8</field>
+        <field name="margin_left">8</field>
+        <field name="margin_right">8</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">96</field>
+    </record>
+
+    <record id="action_report_sale_order_simplified" model="ir.actions.report">
+        <field name="name">Proforma Invoice (Simplified)</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">wood_world_customistation.report_sale_order_simplified_document</field>
+        <field name="report_file">wood_world_customistation.report_sale_order_simplified_document</field>
+        <field name="print_report_name">'PI SUMMARY - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="paperformat_id" ref="wood_world_customistation.paperformat_proforma_invoice"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- HEADER + FOOTER WRAP TEMPLATE                                 -->
+    <!--                                                                -->
+    <!-- This replaces the old div.header / div.footer approach.       -->
+    <!-- wkhtmltopdf renders a real "header" or "footer" frame in a    -->
+    <!-- separate layout pass with its own (unreliable) width/height   -->
+    <!-- measurement — that's exactly what was causing the banner PNG  -->
+    <!-- to be mis-sized and overlap the page content below it.        -->
+    <!--                                                                -->
+    <!-- Instead, exactly like saafar_travels' customer_ledger report, -->
+    <!-- the banner and footer are rendered as ordinary, in-flow HTML  -->
+    <!-- around each doc's content via t-out="0". There is no second   -->
+    <!-- rendering pass, so there is nothing left to overlap.          -->
+    <!--                                                                -->
+    <!-- Trade-off: the live "Page X / Y" counter only works inside a  -->
+    <!-- true wkhtmltopdf footer frame, so it can't be kept with this  -->
+    <!-- approach (the Purchase Order sample you shared doesn't show  -->
+    <!-- one either, so this matches that layout).                     -->
+    <!-- ============================================================ -->
+    <template id="report_header_footer_wwd">
+        <style>
+            .wwd-header-wrap { width: 100%; text-align: center; line-height: 0; margin-bottom: 10px; }
+            .wwd-header-wrap img { width: 100%; height: auto; display: block; }
+
+            .wwd-footer-wrap {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            box-sizing: border-box;
+            background: #fff;
+            text-align: center;
+            line-height: 0;
+            }
+            .wwd-footer-wrap img { width: 100%; height: auto; display: block; }
+        </style>
+
+        <!-- Banner - from company.report_header_image -->
+        <div class="wwd-header-wrap">
+            <img t-if="doc.company_id.report_header_image"
+                 t-att-src="image_data_uri(doc.company_id.report_header_image)"
+                 style="width:100%; height:auto; display:block;"/>
+        </div>
+
+        <t t-out="0"/>
+
+        <!-- Footer - from company.report_footer_image -->
+        <div class="wwd-footer-wrap">
+            <img t-if="doc.company_id.report_footer_image"
+                 t-att-src="image_data_uri(doc.company_id.report_footer_image)"
+                 style="width:100%; height:auto; display:block;"/>
+        </div>
+    </template>
+
+    <!-- ============================================================ -->
+    <!-- MAIN REPORT TEMPLATE                                          -->
+    <!-- ============================================================ -->
+    <template id="report_sale_order_simplified_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="wood_world_customistation.report_header_footer_wwd">
+
+                    <style>
+                        .page { padding: 20px !important; margin: 0 !important; font-size: 12px; }
+                        .inv-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 0; }
+                        .inv-table th, .inv-table td { border: 1px solid #000; padding: 6px 8px; }
+                        .inv-table th { background-color: #f2f2f2; text-align: center; font-weight: bold; }
+                        .inv-table .text-end { text-align: right; }
+                        .inv-table .text-center { text-align: center; }
+                        .label-blue { color: #3D6FB4; font-weight: bold; }
+                        .totals-box { width: 260px; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+                        .totals-box td { border: 1px solid #000; padding: 6px 10px; }
+                        .totals-box .total-row { background-color: #714B67; color: #fff; font-weight: bold; }
+                        .amount-words { font-size: 11px; margin-top: 8px; text-align: right; color: #3D6FB4;
+                        word-wrap: break-word; }
+                        .sign-line { border-top: 1px dotted #000; padding-top: 4px; font-size: 11px; font-weight: bold;
+                        }
+                        .bottom-info {
+                        position: fixed;
+                        bottom: 130px;
+                        left: 20px;
+                        right: 20px;
+                        z-index: 10;
+                        }
+                    </style>
+
+                    <t t-set="summary" t-value="doc._get_simplified_report_summary()"/>
+                    <!-- Qty column: uses the wizard's editable override (doc.pi_qty_override) when set,
+                         otherwise falls back to the sum of all real order line quantities
+                         (sections/notes excluded). -->
+                    <t t-set="total_qty"
+                       t-value="doc.pi_qty_override if doc.pi_qty_override else sum(doc.order_line.filtered(lambda l: not l.display_type).mapped('product_uom_qty'))"/>
+
+                    <div class="page">
+
+                        <!-- Title -->
+                        <div style="text-align:center;margin:10px 0 20px 0;">
+                            <h2 style="margin:0;text-decoration:underline;font-weight:bold;">PROFORMA INVOICE</h2>
+                        </div>
+
+                        <!-- Bill To / Invoice Info -->
+                        <table style="width:100%;margin-bottom:15px;">
+                            <tr>
+                                <td style="width:55%;vertical-align:top;">
+                                    <div class="label-blue">Bill To:</div>
+                                    <div t-field="doc.partner_id.name"/>
+                                    <t t-if="doc.partner_id.street">
+                                        <div t-field="doc.partner_id.street"/>
+                                    </t>
+                                    <t t-if="doc.partner_id.city">
+                                        <div t-field="doc.partner_id.city"/>
+                                    </t>
+                                    <t t-if="doc.partner_id.state_id">
+                                        <div t-field="doc.partner_id.state_id.name"/>
+                                    </t>
+                                    <t t-if="doc.partner_id.country_id">
+                                        <div t-field="doc.partner_id.country_id.name"/>
+                                    </t>
+                                    <t t-if="doc.partner_id.vat">
+                                        <div>VAT:
+                                            <span t-field="doc.partner_id.vat"/>
+                                        </div>
+                                    </t>
+                                </td>
+                                <td style="width:45%;vertical-align:top;text-align:right;">
+                                    <div>
+                                        VAT:
+                                        <span t-field="doc.company_id.vat"/>
+                                    </div>
+                                    <div>
+                                        <span class="label-blue">PI No :</span>
+                                        <span class="label-blue" t-field="doc.name"/>
+                                    </div>
+                                    <div>
+                                        PI Date :
+                                        <span t-field="doc.date_order" t-options='{"widget":"date"}'/>
+                                    </div>
+
+                                    <div>
+                                        Salesperson :
+                                        <span t-field="doc.user_id.name"/>
+                                    </div>
+                                    <t t-if="doc.payment_term_id">
+                                        <div>
+                                            Payment Terms :
+                                            <span t-field="doc.payment_term_id.name"/>
+                                        </div>
+                                    </t>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- One-line Summary Table -->
+                        <table class="inv-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 8%;">No.</th>
+                                    <th>Description</th>
+                                    <th style="width: 10%;">Qty</th>
+                                    <th style="width: 15%;">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="text-center">1</td>
+                                    <td>
+                                        <span t-esc="summary['description']"/>
+                                    </td>
+                                    <td class="text-center">
+                                        <span t-esc="'{:g}'.format(total_qty)"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="'{:,.2f}'.format(summary['amount'])"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Totals Box -->
+                        <table style="width:100%;">
+                            <tr>
+                                <td style="width:60%;"></td>
+                                <td style="width:40%;">
+                                    <table class="totals-box" style="margin-left:auto;">
+                                        <tr>
+                                            <td>Subtotal</td>
+                                            <td class="text-end">
+                                                <span t-esc="'{:,.2f}'.format(summary['amount'])"/>
+                                                <span t-esc="doc.currency_id.symbol"/>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Tax</td>
+                                            <td class="text-end">
+                                                <span t-esc="'{:,.2f}'.format(doc.amount_tax)"/>
+                                                <span t-esc="doc.currency_id.symbol"/>
+                                            </td>
+                                        </tr>
+                                        <tr class="total-row">
+                                            <td>Net Amount Inc Vat</td>
+                                            <td class="text-end">
+                                                <span t-esc="'{:,.2f}'.format(summary['total'])"/>
+                                                <span t-esc="doc.currency_id.symbol"/>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                        <t t-if="doc.amount_total_words">
+                            <div class="amount-words">
+                                Total amount in words:
+                                <br/>
+                                <span t-esc="doc.amount_total_words"/>
+                            </div>
+                        </t>
+                        <t t-if="doc.company_id.pi_report_description">
+                            <div class="terms-box">
+                                <span t-field="doc.company_id.pi_report_description"/>
+                            </div>
+                        </t>
+
+                        <!-- Signature Blocks -->
+                        <div class="bottom-info">
+
+                            <table style="width:100%;margin-top:80px;">
+                                <tr>
+                                    <td style="width:50%;">
+                                        <div style="height:16px;"></div>
+                                    </td>
+                                    <td style="width:50%;text-align:right;">
+                                        <div style="font-weight:bold;font-size:11px;">
+                                            <span t-field="doc.company_id.name"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="width:50%;">
+                                        <div class="sign-line">Customer Signature &amp; Stamp</div>
+                                    </td>
+                                    <td style="width:50%;text-align:right;">
+                                        <div class="sign-line" style="text-align:right;">Authorised Signatory</div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </div>
+                    </div>
+
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_quotation_wwd" model="report.paperformat">
+        <field name="name">Quotation A4</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">8</field>
+        <field name="margin_bottom">35</field>
+        <field name="margin_left">8</field>
+        <field name="margin_right">8</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">96</field>
+    </record>
+
+    <template id="report_quotation_layout_wwd">
+        <div class="article" t-att-data-oe-model="doc._name" t-att-data-oe-id="doc.id">
+            <!-- Keep the existing banner on the first page of each order. -->
+            <div style="width:100%;text-align:center;line-height:0;margin-bottom:10px;">
+                <img t-if="doc.company_id.report_header_image"
+                     t-att-src="image_data_uri(doc.company_id.report_header_image)"
+                     style="width:100%;height:auto;display:block;" alt="Company header"/>
+            </div>
+            <t t-out="0"/>
+        </div>
+
+        <!-- Odoo extracts this into wkhtmltopdf's actual page footer. -->
+        <div class="footer wwd-quotation-footer"
+             style="position:static !important;margin:0;padding:0;border:0 !important;outline:0;box-shadow:none;">
+            <!-- Keep footer styles inside the extracted PDF footer. No layout table. -->
+            <style>
+                .wwd-quotation-footer, .wwd-quotation-footer * {
+                border: none !important;
+                outline: none !important;
+                box-shadow: none !important;
+                }
+            </style>
+            <div class="wwd-quotation-last-page-footer"
+                 style="visibility:hidden;position:static;height:auto;width:100%;border:0 !important;">
+                <div style="position:static;width:100%;text-align:center;line-height:0;border:0 !important;">
+                    <img t-if="doc.company_id.report_footer_image"
+                         t-att-src="image_data_uri(doc.company_id.report_footer_image)"
+                         style="width:100%;height:auto;display:block;border:0 !important;"
+                         alt="Company footer"/>
+                </div>
+            </div>
+            <script type="text/javascript">
+                (function () {
+                function showLastPageFooter() {
+                var params = {};
+                var query = window.location.search.substring(1).split('&amp;');
+                for (var i = 0; i &lt; query.length; i++) {
+                var pair = query[i].split('=');
+                params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+                }
+                // sitepage/sitepages count pages per order in a batch.
+                var page = parseInt(params.sitepage || params.page, 10);
+                var total = parseInt(params.sitepages || params.topage, 10);
+                var show = page &gt; 0 &amp;&amp; page === total;
+                var blocks = document.getElementsByClassName('wwd-quotation-last-page-footer');
+                for (var j = 0; j &lt; blocks.length; j++) {
+                blocks[j].style.visibility = show ? 'visible' : 'hidden';
+                }
+                }
+                // Preserve Odoo's own onload handler for selecting a batch footer.
+                window.addEventListener('load', showLastPageFooter, false);
+                }());
+            </script>
+        </div>
+    </template>
+
+    <record id="action_report_sale_order_quotation_full" model="ir.actions.report">
+        <field name="name">Quotation</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">wood_world_customistation.report_sale_order_quotation_full_document</field>
+        <field name="report_file">wood_world_customistation.report_sale_order_quotation_full_document</field>
+        <field name="print_report_name">'QUOTATION - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="paperformat_id" ref="wood_world_customistation.paperformat_quotation_wwd"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_sale_order_quotation_full_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="wood_world_customistation.report_quotation_layout_wwd">
+
+                    <style>
+                        .quotation-page { padding: 20px !important; margin: 0 !important; font-size: 12px; }
+                        .inv-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 0;
+                        table-layout:
+                        fixed; }
+                        .inv-table th, .inv-table td { border: 1px solid #000; padding: 6px 8px; vertical-align: middle;
+                        }
+                        .inv-table th { background-color: #f2f2f2; text-align: center; font-weight: bold; }
+                        .inv-table .text-end { text-align: right; }
+                        .inv-table .text-center { text-align: center; }
+                        .inv-table .section-row td { background-color: #eef2f7; font-weight: bold; }
+                        .inv-table .note-row td { font-style: italic; color: #555; border-top: none; }
+                        .label-blue { color: #3D6FB4; font-weight: bold; }
+                        .totals-box { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+                        .totals-box td { border: 1px solid #000; padding: 6px 10px; }
+                        .totals-box .total-row { background-color: #714B67; color: #fff; font-weight: bold; }
+                        .totals-box .total-row { background-color: #f2f2f2; color: #000; font-weight: bold; }
+                        .amount-words { font-size: 11px; margin-top: 8px; text-align: right; color: #3D6FB4; word-wrap:
+                        break-word; }
+                        .sign-line { border-top: 1px dotted #000; padding-top: 4px; font-size: 11px; font-weight: bold;
+                        }
+                        .terms-box { font-size: 11px; margin-top: 15px; }
+                        .bottom-info {
+                        position: static;
+                        margin-top: 0 !important;
+                        padding-top: 90px !important;
+                        page-break-inside: avoid;
+                        }
+
+                        .quotation-page { line-height: 1.35; }
+                        .quotation-page .inv-table thead { display: table-header-group; }
+                        .quotation-page .inv-table tr { page-break-inside: avoid; }
+                        .quotation-page .inv-table td,
+                        .quotation-page .inv-table th { word-wrap: break-word; overflow-wrap: break-word; }
+                        .quotation-page .totals-box { page-break-inside: avoid; }
+                        .quotation-page .totals-box .text-end { text-align: right; }
+                        .quotation-page .terms-box {
+                        height: auto; overflow: visible; page-break-inside: auto;
+                        word-wrap: break-word; overflow-wrap: break-word; line-height: 1.4;
+                        }
+                        .quotation-page .terms-box p { margin: 0 0 6px; orphans: 2; widows: 2; }
+                        .quotation-page .terms-box h1,
+                        .quotation-page .terms-box h2,
+                        .quotation-page .terms-box h3 { page-break-after: avoid; }
+                        .quotation-page .terms-box img { max-width: 100%; height: auto; }
+                        .quotation-page .terms-box table { max-width: 100%; width: 100%; table-layout: fixed; }
+                        .quotation-page .terms-box ul,
+                        .quotation-page .terms-box ol { padding-left: 20px; }
+                        .quotation-page .terms-box pre { white-space: pre-wrap; }
+
+                        .quotation-page .quotation-borderless,
+                        .quotation-page .quotation-borderless > tbody,
+                        .quotation-page .quotation-borderless > tbody > tr,
+                        .quotation-page .quotation-borderless > tbody > tr > td,
+                        .quotation-page .quotation-borderless > tr,
+                        .quotation-page .quotation-borderless > tr > td { border:0 !important; }
+                        .quotation-page table.totals-box,
+                        .quotation-page table.totals-box td { border:1px solid #000 !important; }
+                        .quotation-page .sign-line { border:0 !important; border-top:1px dotted #000 !important; }
+                    </style>
+
+                    <div class="page quotation-page">
+
+                        <!-- 1. Title -->
+                        <div style="text-align:center;margin:10px 0 20px 0;">
+                            <h2 style="margin:0;text-decoration:underline;font-weight:bold;color:#FF0000;font-size:24px;">
+                                QUOTATION
+                            </h2>
+                        </div>
+
+                        <!-- 2. Bill To / Quotation Info -->
+                        <table class="quotation-borderless" style="width:100%;margin-bottom:15px;">
+                            <tr>
+                                <td style="width:55%;vertical-align:top;">
+                                    <div>Bill To:</div>
+                                    <div t-field="doc.partner_id.name"/>
+                                    <div t-field="doc.partner_id.street"/>
+                                    <div t-field="doc.partner_id.city"/>
+                                    <div t-field="doc.partner_id.state_id.name"/>
+                                    <div t-field="doc.partner_id.country_id.name"/>
+                                    <t t-if="doc.partner_id.vat">
+                                        <div>VAT:
+                                            <span t-field="doc.partner_id.vat"/>
+                                        </div>
+                                    </t>
+                                </td>
+                                <td style="width:45%;vertical-align:top;text-align:right;">
+                                    <div>
+                                        VAT:
+                                        <span t-field="doc.company_id.vat"/>
+                                    </div>
+                                    <div>
+                                        <span>Quotation No :</span>
+                                        <span t-field="doc.name"/>
+                                    </div>
+                                    <div>
+                                        Quotation Date :
+                                        <span t-field="doc.date_order" t-options='{"widget":"date"}'/>
+                                    </div>
+                                    <t t-if="doc.validity_date">
+                                        <div>
+                                            Expiration Date :
+                                            <span t-field="doc.validity_date"/>
+                                        </div>
+                                    </t>
+                                    <div>
+                                        Salesperson :
+                                        <span t-field="doc.user_id.name"/>
+                                    </div>
+                                    <t t-if="doc.payment_term_id">
+                                        <div>
+                                            Payment Terms :
+                                            <span t-field="doc.payment_term_id.name"/>
+                                        </div>
+                                    </t>
+                                    <div t-if="doc.project_id">
+                                        Project :
+                                        <span t-field="doc.project_id"/>
+                                    </div>
+                                    <div t-if="doc.subject">
+                                        Subject :
+                                        <span t-field="doc.subject"/>
+                                    </div>
+
+                                    <div t-if="doc.reference">
+                                        Reference :
+                                        <span t-field="doc.reference"/>
+                                    </div>
+                                    <div t-if="doc.job_reference">
+                                        Job Reference :
+                                        <span t-field="doc.job_reference"/>
+                                    </div>
+                                    <div t-if="doc.lpo_ref">
+                                        LPO :
+                                        <span t-field="doc.lpo_ref"/>
+                                    </div>
+
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- 3. Itemized Order Lines -->
+                        <table class="inv-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">No.</th>
+                                    <th>Description</th>
+                                    <th style="width: 36%;">Picture</th>
+                                    <th style="width: 6%;">Qty</th>
+                                    <th style="width: 6%;">UoM</th>
+                                    <th style="width: 9%;">Unit Price</th>
+                                    <th style="width: 5%;">Tax</th>
+                                    <th style="width: 11%;">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="line_no" t-value="0"/>
+                                <t t-foreach="doc.order_line" t-as="line">
+                                    <t t-if="not line.display_type">
+                                        <t t-set="line_no" t-value="line_no + 1"/>
+                                        <tr>
+                                            <td class="text-center">
+                                                <span t-esc="line_no"/>
+                                            </td>
+                                            <td>
+                                                <span t-field="line.name"/>
+                                            </td>
+
+                                            <!-- One picture per quotation line. -->
+                                            <td class="text-center" style="vertical-align:middle;">
+                                                <img t-if="line.report_image_1"
+                                                     t-att-src="image_data_uri(line.report_image_1)"
+                                                     style="max-width:100%;width:auto;height:auto;max-height:140px;display:block;margin:0 auto;"
+                                                     alt="Product picture"/>
+                                            </td>
+
+                                            <td class="text-center">
+                                                <span t-field="line.product_uom_qty"/>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-field="line.product_uom"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-if="doc.currency_id.position == 'after'">
+                                                    <span t-esc="'%s %s' % ('{:,.{p}f}'.format(line.price_unit, p=doc.currency_id.decimal_places), doc.currency_id.symbol)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span t-esc="'%s %s' % (doc.currency_id.symbol, '{:,.{p}f}'.format(line.price_unit, p=doc.currency_id.decimal_places))"/>
+                                                </t>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-if="doc.currency_id.position == 'after'">
+                                                    <span t-esc="'%s %s' % ('{:,.{p}f}'.format(line.price_tax, p=doc.currency_id.decimal_places), doc.currency_id.symbol)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span t-esc="'%s %s' % (doc.currency_id.symbol, '{:,.{p}f}'.format(line.price_tax, p=doc.currency_id.decimal_places))"/>
+                                                </t>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-if="doc.currency_id.position == 'after'">
+                                                    <span t-esc="'%s %s' % ('{:,.{p}f}'.format(line.price_subtotal, p=doc.currency_id.decimal_places), doc.currency_id.symbol)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span t-esc="'%s %s' % (doc.currency_id.symbol, '{:,.{p}f}'.format(line.price_subtotal, p=doc.currency_id.decimal_places))"/>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <t t-elif="line.display_type == 'line_section'">
+                                        <tr class="section-row">
+                                            <td colspan="8">
+                                                <span t-field="line.name"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <t t-elif="line.display_type == 'line_note'">
+                                        <tr class="note-row">
+                                            <td colspan="8">
+                                                <span t-field="line.name"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <!-- 4. Totals Box -->
+                        <table class="quotation-borderless" style="width:100%;">
+                            <tr>
+                                <td style="width:60%;"></td>
+                                <td style="width:40%;">
+                                    <table class="totals-box" style="margin-left:auto;">
+                                        <tr>
+                                            <td>Subtotal Amount</td>
+                                            <td class="text-end">
+                                                <t t-if="doc.currency_id.position == 'after'">
+                                                    <span t-esc="'%s %s' % ('{:,.{p}f}'.format(doc.amount_untaxed, p=doc.currency_id.decimal_places), doc.currency_id.symbol)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span t-esc="'%s %s' % (doc.currency_id.symbol, '{:,.{p}f}'.format(doc.amount_untaxed, p=doc.currency_id.decimal_places))"/>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Taxes</td>
+                                            <td class="text-end">
+                                                <t t-if="doc.currency_id.position == 'after'">
+                                                    <span t-esc="'%s %s' % ('{:,.{p}f}'.format(doc.amount_tax, p=doc.currency_id.decimal_places), doc.currency_id.symbol)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span t-esc="'%s %s' % (doc.currency_id.symbol, '{:,.{p}f}'.format(doc.amount_tax, p=doc.currency_id.decimal_places))"/>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                        <tr class="total-row">
+                                            <td>Total</td>
+                                            <td class="text-end">
+                                                <t t-if="doc.currency_id.position == 'after'">
+                                                    <span t-esc="'%s %s' % ('{:,.{p}f}'.format(doc.amount_total, p=doc.currency_id.decimal_places), doc.currency_id.symbol)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span t-esc="'%s %s' % (doc.currency_id.symbol, '{:,.{p}f}'.format(doc.amount_total, p=doc.currency_id.decimal_places))"/>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                        <t t-if="doc.amount_total_words">
+
+                            <div class="amount-words">
+                                Total amount in words:
+                                <br/>
+                                <span t-esc="doc.amount_total_words"/>
+                            </div>
+                        </t>
+                        <!-- Customer-specific terms from this sales order. -->
+                        <div t-if="not is_html_empty(doc.note)" class="terms-box customer-terms">
+                            <div class="quotation-terms-content" t-field="doc.note"/>
+                        </div>
+
+
+                        <!-- 5. Terms &amp; Conditions -->
+                        <t t-if="doc.company_id.quotation_report_description">
+                            <div class="terms-box">
+                                <div class="quotation-terms-content"
+                                     t-field="doc.company_id.quotation_report_description"/>
+                            </div>
+                        </t>
+
+
+                        <!-- 6. Signature Blocks -->
+                        <div class="bottom-info"
+                             style="margin-top:0 !important;padding-top:90px !important;page-break-inside:avoid;">
+
+                            <table class="quotation-borderless" style="width:100%;margin-top:0;">
+                                <tr>
+                                    <td style="width:50%;">
+                                        <div style="height:16px;"></div>
+                                    </td>
+                                    <td style="width:50%;text-align:right;">
+                                        <div style="font-weight:bold;font-size:11px;">
+                                            <span t-field="doc.company_id.name"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="width:50%;">
+                                        <div class="sign-line" style="margin-right:15px;">Customer Signature &amp;
+                                            Stamp
+                                        </div>
+                                    </td>
+                                    <td style="width:50%;text-align:right;">
+                                        <div class="sign-line" style="text-align:right;margin-left:15px;">Authorised
+                                            Signatory
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </div>
+                    </div>
+
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Dedicated to this PO report; shared proforma settings are unchanged. -->
+    <record id="paperformat_purchase_order_wwd" model="report.paperformat">
+        <field name="name">Purchase Order A4</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">8</field>
+        <field name="margin_bottom">35</field>
+        <field name="margin_left">8</field>
+        <field name="margin_right">8</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">96</field>
+    </record>
+
+    <template id="report_purchase_order_layout_wwd">
+        <div class="article" t-att-data-oe-model="doc._name" t-att-data-oe-id="doc.id">
+            <!-- Keep the existing banner on the first page of each order. -->
+            <div style="width:100%;text-align:center;line-height:0;margin-bottom:10px;">
+                <img t-if="doc.company_id.report_header_image"
+                     t-att-src="image_data_uri(doc.company_id.report_header_image)"
+                     style="width:100%;height:auto;display:block;" alt="Company header"/>
+            </div>
+            <t t-out="0"/>
+        </div>
+
+        <!-- Odoo extracts this into wkhtmltopdf's actual page footer. -->
+        <div class="footer wwd-po-footer"
+             style="position:static !important;margin:0;padding:0;border:0 !important;outline:0;box-shadow:none;">
+            <!-- Keep footer styles inside the extracted PDF footer. No layout table. -->
+            <style>
+                .wwd-po-footer, .wwd-po-footer * {
+                border: none !important;
+                outline: none !important;
+                box-shadow: none !important;
+                }
+            </style>
+            <div class="wwd-po-last-page-footer"
+                 style="visibility:hidden;position:static;height:auto;width:100%;border:0 !important;">
+                <div style="position:static;width:100%;height:auto;text-align:center;line-height:0;border:0 !important;">
+                    <img t-if="doc.company_id.report_footer_image"
+                         t-att-src="image_data_uri(doc.company_id.report_footer_image)"
+                         style="width:100% !important;height:auto !important;max-width:none !important;max-height:none !important;display:block;border:0 !important;"
+                         alt="Company footer"/>
+                </div>
+            </div>
+            <script type="text/javascript">
+                (function () {
+                function showLastPageFooter() {
+                var params = {};
+                var query = window.location.search.substring(1).split('&amp;');
+                for (var i = 0; i &lt; query.length; i++) {
+                var pair = query[i].split('=');
+                params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+                }
+                // sitepage/sitepages count pages per order in a batch.
+                var page = parseInt(params.sitepage || params.page, 10);
+                var total = parseInt(params.sitepages || params.topage, 10);
+                var show = page &gt; 0 &amp;&amp; page === total;
+                var blocks = document.getElementsByClassName('wwd-po-last-page-footer');
+                for (var j = 0; j &lt; blocks.length; j++) {
+                blocks[j].style.visibility = show ? 'visible' : 'hidden';
+                }
+                }
+                // Preserve Odoo's own onload handler for selecting a batch footer.
+                window.addEventListener('load', showLastPageFooter, false);
+                }());
+            </script>
+        </div>
+    </template>
+
+    <record id="action_report_purchase_order_full" model="ir.actions.report">
+        <field name="name">Purchase Order</field>
+        <field name="model">purchase.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">wood_world_customistation.report_purchase_order_full_document</field>
+        <field name="report_file">wood_world_customistation.report_purchase_order_full_document</field>
+        <field name="print_report_name">'PURCHASE ORDER - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="purchase.model_purchase_order"/>
+        <field name="paperformat_id" ref="wood_world_customistation.paperformat_purchase_order_wwd"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_purchase_order_full_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="wood_world_customistation.report_purchase_order_layout_wwd">
+
+                    <style>
+                        /* Override report/theme borders only in these sections. */
+                        .doc-page .po-borderless,
+                        .doc-page .po-borderless *,
+                        .doc-page .totals-box,
+                        .doc-page .totals-box *,
+                        .doc-page .info-box,
+                        .doc-page .info-box *,
+                        .doc-page .sign-line {
+                        border: 0 !important;
+                        box-shadow: none !important;
+                        }
+
+                        .doc-page {
+                        padding: 15px 20px 0 20px !important;
+                        margin: 0 !important;
+                        font-size: 12px;
+                        line-height: 1.35;
+                        position: relative;
+                        }
+                        .inv-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 10.5px;
+                        margin-top: 0;
+                        table-layout: fixed;
+                        }
+                        .inv-table th, .inv-table td {
+                        border: 1px solid #000;
+                        padding: 5px 4px;
+                        vertical-align: middle;
+                        word-wrap: break-word;
+                        }
+                        .inv-table thead { display: table-header-group; }
+                        .inv-table tr {
+                        page-break-inside: avoid;
+                        }
+                        .inv-table th {
+                        background-color: #f2f2f2;
+                        text-align: center;
+                        font-weight: bold;
+                        font-size: 9.5px;
+                        }
+                        .inv-table .text-end { text-align: right; }
+                        .inv-table .text-center { text-align: center; }
+                        .inv-table .section-row td {
+                        background-color: #eef2f7;
+                        font-weight: bold;
+                        }
+                        .inv-table .note-row td {
+                        font-style: italic;
+                        color: #555;
+                        border-top: none;
+                        }
+                        .label-blue { color: #3D6FB4; font-weight: bold; }
+                        .totals-box {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 12px;
+                        margin-top: 10px;
+                        }
+                        .totals-box { page-break-inside: avoid; }
+                        .totals-box .text-end { text-align: right; }
+                        .doc-page table.totals-box,
+                        .doc-page table.totals-box td {
+                        border: 1px solid #000 !important;
+                        padding: 6px 10px;
+                        }
+                        .totals-box .total-row,
+                        .totals-box .total-row td {
+                        background-color: #f2f2f2 !important;
+                        color: #000 !important;
+                        font-weight: bold;
+                        }
+                        .doc-page .sign-line {
+                        border-top: 1px dotted #000 !important;
+                        padding-top: 4px;
+                        font-size: 11px;
+                        font-weight: bold;
+                        }
+                        .terms-box {
+                        font-size: 11px;
+                        margin-top: 15px;
+                        padding-top: 10px;
+                        }
+                        .terms-box .label-blue {
+                        display: block;
+                        margin-bottom: 6px;
+                        }
+                        .bottom-info {
+                        position: static;
+                        margin-top: 0 !important;
+                        padding-top: 90px !important;
+                        clear: both;
+                        page-break-inside: avoid;
+                        }
+                        .doc-page .info-box {
+                        width: 100%;
+                        table-layout: fixed;
+                        border-collapse: collapse;
+                        font-size: 11px;
+                        border-top: 2px solid #000 !important;
+                        border-bottom: 2px solid #000 !important;
+                        padding: 6px 0;
+                        background: #fff;
+                        }
+                        .info-box td {
+                        padding: 2px 4px;
+                        vertical-align: top;
+                        }
+                        .info-box td {
+                        word-wrap: break-word;
+                        overflow-wrap: break-word;
+                        }
+                        .info-box p { margin: 0 0 4px; }
+                        .info-box .info-label {
+                        width: 120px;
+                        font-weight: bold;
+                        white-space: nowrap;
+                        }
+                        .info-box .info-sep { width: 10px; }
+                        .info-box .info-spacer td { padding: 4px 0 0 0; }
+                    </style>
+
+                    <div class="page doc-page">
+
+                        <!-- 1. Title -->
+                        <div style="text-align:center;margin:10px 0 20px 0;">
+                            <h2 style="margin:0;text-decoration:underline;font-weight:bold;">PURCHASE ORDER</h2>
+                        </div>
+
+                        <!-- 2. Vendor / PO Info -->
+                        <table class="po-borderless" style="width:100%;margin-bottom:15px;">
+                            <tr>
+                                <td style="width:55%;vertical-align:top;">
+                                    <div>Vendor:</div>
+                                    <div t-field="doc.partner_id.name"/>
+                                    <div t-field="doc.partner_id.street"/>
+                                    <div t-field="doc.partner_id.city"/>
+                                    <div t-field="doc.partner_id.state_id.name"/>
+                                    <div t-field="doc.partner_id.country_id.name"/>
+                                    <t t-if="doc.partner_id.vat">
+                                        <div>VAT:
+                                            <span t-field="doc.partner_id.vat"/>
+                                        </div>
+                                    </t>
+                                </td>
+                                <td style="width:45%;vertical-align:top;text-align:right;">
+                                    <div>
+                                        VAT:
+                                        <span t-field="doc.company_id.vat"/>
+                                    </div>
+                                    <div>
+                                        <span>Purchase Order No :</span>
+                                        <span t-field="doc.name"/>
+                                    </div>
+                                    <div>
+                                        Order Date :
+                                        <span t-field="doc.date_order" t-options='{"widget":"date"}'/>
+                                    </div>
+                                    <div>
+                                        Purchase Rep :
+                                        <span t-field="doc.user_id.name"/>
+                                    </div>
+                                    <div t-if="doc.project_id">
+                                        Project :
+                                        <span t-field="doc.project_id"/>
+                                    </div>
+                                    <div t-if="doc.subject">
+                                        Subject :
+                                        <span t-field="doc.subject"/>
+                                    </div>
+
+                                    <div t-if="doc.reference">
+                                        Reference :
+                                        <span t-field="doc.reference"/>
+                                    </div>
+                                    <div t-if="doc.job_reference">
+                                        Job Reference :
+                                        <span t-field="doc.job_reference"/>
+                                    </div>
+
+
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- 3. Itemized Order Lines -->
+                        <table class="inv-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 4%;">S.NO</th>
+                                    <th style="width: 26%;">Description</th>
+                                    <th style="width: 7%;">Qty</th>
+                                    <th style="width: 10%;">Rate</th>
+                                    <th style="width: 10%;">Amount</th>
+                                    <th style="width: 12%;">Taxable Amt</th>
+                                    <th style="width: 6%;">VAT %</th>
+                                    <th style="width: 12%;">VAT Amount</th>
+                                    <th style="width: 13%;">Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="line_no" t-value="0"/>
+                                <t t-foreach="doc.order_line" t-as="line">
+                                    <t t-if="not line.display_type">
+                                        <t t-set="line_no" t-value="line_no + 1"/>
+
+                                        <!-- Per-line calculations -->
+                                        <t t-set="line_amount" t-value="line.price_subtotal"/>
+                                        <t t-set="line_taxable_amount" t-value="line.price_subtotal"/>
+                                        <t t-set="line_vat_amount" t-value="line.price_tax"/>
+                                        <t t-set="line_total_amount" t-value="line.price_total"/>
+                                        <t t-set="line_vat_percent"
+                                           t-value="line.taxes_id[0].amount if line.taxes_id else 0.0"/>
+
+                                        <tr>
+                                            <td class="text-center">
+                                                <span t-esc="line_no"/>
+                                            </td>
+                                            <td>
+                                                <span t-esc="(line.name or '').replace('&amp;amp;', '&amp;').replace('&amp;', '&amp;')"/>
+                                                <t t-if="line.product_job_reference">
+                                                    <span t-esc="' (%s)' % line.product_job_reference.name"/>
+                                                </t>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-field="line.product_qty"/>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-esc="'{:,.{p}f}'.format(line.price_unit, p=doc.currency_id.decimal_places)"/>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-esc="'{:,.{p}f}'.format(line_amount, p=doc.currency_id.decimal_places)"/>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-esc="'{:,.{p}f}'.format(line_taxable_amount, p=doc.currency_id.decimal_places)"/>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-esc="('{:.0f}'.format(line_vat_percent) if line_vat_percent == int(line_vat_percent) else '{:.2f}'.format(line_vat_percent)) + '%'"/>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-esc="'{:,.{p}f}'.format(line_vat_amount, p=doc.currency_id.decimal_places)"/>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-esc="'{:,.{p}f}'.format(line_total_amount, p=doc.currency_id.decimal_places)"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <t t-elif="line.display_type == 'line_section'">
+                                        <tr class="section-row">
+                                            <td colspan="9">
+                                                <span t-field="line.name"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <t t-elif="line.display_type == 'line_note'">
+                                        <tr class="note-row">
+                                            <td colspan="9">
+                                                <span t-field="line.name"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <!-- 4. Totals Box -->
+                        <table class="po-borderless" style="width:100%;">
+                            <tr>
+                                <td style="width:60%;"></td>
+                                <td style="width:40%;">
+                                    <table class="totals-box" style="margin-left:auto;">
+                                        <tr>
+                                            <td>Subtotal Amount</td>
+                                            <td class="text-end">
+                                                <t t-if="doc.currency_id.position == 'after'">
+                                                    <span t-esc="'%s %s' % ('{:,.{p}f}'.format(doc.amount_untaxed, p=doc.currency_id.decimal_places), doc.currency_id.symbol)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span t-esc="'%s %s' % (doc.currency_id.symbol, '{:,.{p}f}'.format(doc.amount_untaxed, p=doc.currency_id.decimal_places))"/>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>VAT Total</td>
+                                            <td class="text-end">
+                                                <t t-if="doc.currency_id.position == 'after'">
+                                                    <span t-esc="'%s %s' % ('{:,.{p}f}'.format(doc.amount_tax, p=doc.currency_id.decimal_places), doc.currency_id.symbol)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span t-esc="'%s %s' % (doc.currency_id.symbol, '{:,.{p}f}'.format(doc.amount_tax, p=doc.currency_id.decimal_places))"/>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                        <tr class="total-row">
+                                            <td>Grand Total</td>
+                                            <td class="text-end">
+                                                <t t-if="doc.currency_id.position == 'after'">
+                                                    <span t-esc="'%s %s' % ('{:,.{p}f}'.format(doc.amount_total, p=doc.currency_id.decimal_places), doc.currency_id.symbol)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span t-esc="'%s %s' % (doc.currency_id.symbol, '{:,.{p}f}'.format(doc.amount_total, p=doc.currency_id.decimal_places))"/>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- 5. Terms &amp; Conditions -->
+                        <t t-if="doc.company_id.invoice_report_description">
+                            <div class="terms-box">
+                                <span t-field="doc.company_id.invoice_report_description"/>
+                            </div>
+                        </t>
+                        <!-- Signatures and information stay in document flow to prevent overlap.
+                             The separate report layout handles the last-page company footer. -->
+                        <div class="bottom-info"
+                             style="margin-top:0 !important;padding-top:90px !important;page-break-inside:avoid;">
+                            <!-- 6. Signature Blocks - placed just above bottom-info -->
+                            <table class="po-borderless" style="width:100%;margin-top:0;margin-bottom:20px;">
+                                <tr>
+                                    <td style="width:50%;">
+                                        <div style="height:16px;"></div>
+                                    </td>
+                                    <td style="width:50%;text-align:right;">
+                                        <div style="font-weight:bold;font-size:11px;">
+                                            <span t-field="doc.company_id.name"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="width:50%;">
+                                        <div class="sign-line" style="margin-right:15px;">Vendor Signature &amp; Stamp
+                                        </div>
+                                    </td>
+                                    <td style="width:50%;text-align:right;">
+                                        <div class="sign-line" style="text-align:right;margin-left:15px;">Authorised
+                                            Signatory
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <table class="info-box">
+                                <tr>
+                                    <td class="info-label">Remarks</td>
+                                    <td class="info-sep">:</td>
+                                    <td>
+                                        <span t-field="doc.remarks"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="info-label">Note</td>
+                                    <td class="info-sep">:</td>
+                                    <td>
+                                        <span t-field="doc.notes"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="info-label">Payment Terms</td>
+                                    <td class="info-sep">:</td>
+                                    <td>
+                                        <span t-field="doc.payment_term_id.name"/>
+                                    </td>
+                                </tr>
+                                <tr class="info-spacer">
+                                    <td colspan="3"></td>
+                                </tr>
+                                <tr>
+                                    <td class="info-label">Delivery Terms</td>
+                                    <td class="info-sep">:</td>
+                                    <td>
+                                        <span t-field="doc.delivery_term_id"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="info-label">Delivery Details</td>
+                                    <td class="info-sep">:</td>
+                                    <td>
+                                        <span t-field="doc.delivery_details"/>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                    </div>
+
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
